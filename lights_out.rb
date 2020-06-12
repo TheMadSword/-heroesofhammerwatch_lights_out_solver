@@ -1,42 +1,44 @@
 class LightsOut
 
   @pos_fx = []
-  POS_HERP_FX = [
-    "000001011".to_i(2), # "000000001", #0, x=11
-    "000010111".to_i(2), # "000000010", #1, x=21
-    "000100110".to_i(2), # "000000100", #2, x=31
-    "001011001".to_i(2), # "000001000", #3, x=12
-    "010111010".to_i(2), # "000010000", #4, x=22
-    "100110100".to_i(2), # "000100000", #5, x=32
-    "011001000".to_i(2), # "001000000", #6, x=13
-    "111010000".to_i(2), # "010000000", #7, x=23
-    "110100000".to_i(2), # "100000000", #8, x=33
-  ]
 
   @all_lights = 0
-  ALL_LIGHTS = 2**9 - 1
   @all_combo = 0
+  @square_side = 0
 
-  public
+  attr_reader :initial_lights
 
   def initialize(lights, square_side)
     @initial_lights = lights
     generate_pos_fx(square_side)
     @all_lights = 2**(square_side**2) - 1
     @all_combo = 2**(square_side**2 + 1) - 1
+    @square_side = square_side
     p "pos_fx = " + @pos_fx.to_s
-    p "POS_HERP_FX = " + POS_HERP_FX.to_s
   end
 
-  # return int xor transformation following pressed switches as an integer
-  def xor_transfo(int)
-    retval = 0
+  #do line by line, column by column
+  #current_board = int representation of board
+  #tiles_pressed = bits of tiles being pressed, solution being built
+  #current_tile = 0..nb_tile - 1
+  def progressive_solve(current_board, tiles_pressed, current_tile)
+    return tiles_pressed if current_board == @all_lights
+    return false if current_tile >= @pos_fx.size
 
-    (0..(@pos_fx.length - 1)).each do |i|
-      retval ^= @pos_fx[i] if (int & 1 << i) > 0
+    retval = false
+
+    #do nothing hypothesis
+    if check_below_ok(current_board, current_tile)
+      retval = progressive_solve(current_board, tiles_pressed, current_tile + 1)
     end
 
-    retval
+    #activate hypothesis
+    press_current_tile_hypothesis = current_board ^ @pos_fx[current_tile]
+    if !retval && check_below_ok(press_current_tile_hypothesis, current_tile)
+      retval = progressive_solve(press_current_tile_hypothesis, tiles_pressed | (1 << current_tile), current_tile + 1)
+    end
+
+    return retval
   end
 
   def bruteforce_solve
@@ -81,6 +83,16 @@ class LightsOut
 
   private
 
+  #check if belows current_tile, after throwing a hypothesis, we get an unsolvable board
+  #current_tile = 0..@pos_fx.size - 1
+  def check_below_ok(current_board, current_tile)
+    return true if current_tile < @square_side
+
+    all_below_tiles_on = 1 << (current_tile - @square_side + 1) - 1
+
+    (all_below_tiles_on & current_board) == all_below_tiles_on
+  end
+
   def generate_pos_fx(side)
     @pos_fx = []
     (0..(side**2 - 1)).each do |i|
@@ -95,6 +107,17 @@ class LightsOut
       pos += 1 << i + side if y < side - 1
       @pos_fx << pos
     end
+  end
+
+  # return int xor transformation following pressed switches as an integer
+  def xor_transfo(int)
+    retval = 0
+
+    (0..(@pos_fx.length - 1)).each do |i|
+      retval ^= @pos_fx[i] if (int & 1 << i) > 0
+    end
+
+    retval
   end
 
 end

@@ -27,7 +27,12 @@ LightsOut.ascii_print(problem, square_side)
 
 lo = LightsOut.new(problem, square_side)
 
-solution = lo.bruteforce_solve
+#solution = lo.bruteforce_solve
+solution = lo.progressive_solve(lo.initial_lights, 0, 0)
 
-p "Solution (in #{lo.count_bits(solution)} steps): "
-LightsOut.ascii_print(solution, square_side)
+if solution
+  p "Solution (in #{lo.count_bits(solution)} steps): "
+  LightsOut.ascii_print(solution, square_side)
+else
+  p "No solution found"
+end
